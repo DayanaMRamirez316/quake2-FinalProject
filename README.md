@@ -41,8 +41,9 @@ bind MOUSE2 dodge
 bind e punch
 
 bind f stomp
-=============================================================
+
 GamePlay
+=============================================================
 
 listen to the metronome to stay on beat there will be also a visual indicator how fast the pace will be
 
@@ -58,7 +59,7 @@ if player stays on beat player will be given one of the 5 power up where as a ph
 There will also enhancements and hinderance when player is off beat or on beat
         1.speed up sound
         2.silence
-        3.invincibility + unlimited bullets
+        3.hit window increase ( player has .25 seconds to hit the beat)
         4.blast enemies back
 
 weapons will be adjusted to be able to fire to the beat

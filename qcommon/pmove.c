@@ -714,6 +714,7 @@ void PM_CatagorizePosition (void)
 			if (! (pm->s.pm_flags & PMF_ON_GROUND) )
 			{	// just hit the ground
 				pm->s.pm_flags |= PMF_ON_GROUND;
+				pm->s.pm_flags &= ~PMF_DOUBLE_JUMP;
 				// don't do landing time if we were just going down a slope
 				if (pml.velocity[2] < -200)
 				{
@@ -777,6 +778,7 @@ PM_CheckJump
 */
 void PM_CheckJump (void)
 {
+	Com_Printf("Modified version of jump\n");
 	if (pm->s.pm_flags & PMF_TIME_LAND)
 	{	// hasn't been long enough since landing to jump again
 		return;
@@ -788,9 +790,10 @@ void PM_CheckJump (void)
 		return;
 	}
 
+
 	// must wait for jump to be released
-	if (pm->s.pm_flags & PMF_JUMP_HELD)
-		return;
+	//if (pm->s.pm_flags & PMF_JUMP_HELD)
+	//	return;
 
 	if (pm->s.pm_type == PM_DEAD)
 		return;
@@ -810,16 +813,37 @@ void PM_CheckJump (void)
 			pml.velocity[2] = 50;
 		return;
 	}
+	
+	//if (pm->groundentity == NULL)
+	//	return;		// in air, so no effect
 
-	if (pm->groundentity == NULL)
-		return;		// in air, so no effect
+	//double jump
+	if (pm->groundentity == NULL) {
+		if (!(pm->s.pm_flags & PMF_DOUBLE_JUMP) && !(pm->s.pm_flags & PMF_JUMP_HELD)) {
+			pm->s.pm_flags |= PMF_JUMP_HELD;
+			pm->s.pm_flags |= PMF_DOUBLE_JUMP;
 
+			pml.velocity[2] = 500;
+			return;
+		}
+		else {
+			return;
+		}
+	}
+
+	if (pm->s.pm_flags & PMF_JUMP_HELD)
+		return;
+
+	// jump
 	pm->s.pm_flags |= PMF_JUMP_HELD;
+	pm->s.pm_flags &= ~PMF_DOUBLE_JUMP;
 
 	pm->groundentity = NULL;
-	pml.velocity[2] += 270;
-	if (pml.velocity[2] < 270)
-		pml.velocity[2] = 270;
+	pml.velocity[2] += 1000;
+	if (pml.velocity[2] < 1000)
+		pml.velocity[2] = 2000;
+		
+
 }
 
 

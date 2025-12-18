@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define Function(f) {#f, f}
 
 mmove_t mmove_reloc;
+beatSystem_t beatSyst;
 
 field_t fields[] = {
 	{"classname", FOFS(classname), F_LSTRING},
@@ -219,6 +220,18 @@ void InitGame (void)
 	game.maxclients = maxclients->value;
 	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients+1;
+
+	//Initialize beat system
+	beatSyst.bpm = 120.0f;   //may change this 
+	beatSyst.beatInterval = 60.0f / beatSyst.bpm;
+	beatSyst.currBeat = 0;
+	beatSyst.nextGlobalBeat = 0;
+	beatSyst.beatHitWindow = 0.25f; //.1 seconds to hit the note
+	beatSyst.silance = false; //not active
+	beatSyst.effectOn = false;
+	beatSyst.blastOn = false;
+	beatSyst.speedUP = false;
+	beatSyst.hitWind = false;
 }
 
 //=========================================================

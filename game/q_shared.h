@@ -1009,6 +1009,10 @@ typedef enum
 #define STAT_CHASE				16
 #define STAT_SPECTATOR			17
 
+#define	STAT_BEAT_ICON			18		//note icon 
+#define STAT_BEAT_TIMER			19
+#define STAT_BEAT_STREAK		20      
+
 #define	MAX_STATS				32
 
 

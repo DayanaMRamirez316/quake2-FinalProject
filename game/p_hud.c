@@ -313,22 +313,18 @@ void HelpComputer (edict_t *ent)
 	else
 		sk = "hard+";
 
-	// send the layout
-	Com_sprintf (string, sizeof(string),
-		"xv 32 yv 8 picn help "			// background
-		"xv 202 yv 12 string2 \"%s\" "		// skill
-		"xv 0 yv 24 cstring2 \"%s\" "		// level name
-		"xv 0 yv 54 cstring2 \"%s\" "		// help 1
-		"xv 0 yv 110 cstring2 \"%s\" "		// help 2
-		"xv 50 yv 164 string2 \" kills     goals    secrets\" "
-		"xv 50 yv 172 string2 \"%3i/%3i     %i/%i       %i/%i\" ", 
-		sk,
-		level.level_name,
-		game.helpmessage1,
-		game.helpmessage2,
-		level.killed_monsters, level.total_monsters, 
-		level.found_goals, level.total_goals,
-		level.found_secrets, level.total_secrets);
+
+	Com_sprintf ( string, sizeof(string), 
+		"xv -300 yv 0 string2 \"******HOW TO PLAY*******\" "
+		"xv -300 yv 10 string2 \" STAY ON BEAT!: \" "
+		"xv -300 yv 20 string2 \" Listen to the tempo to move and attack on beat! \" "
+		"xv -300 yv 40 string2 \"=====BUTTONS======\" "
+		"xv -300 yv 50 string2 \" SPACE 2x : DOUBLE JUMP\" "
+		"xv -300 yv 60 string2 \" SHIFT    : DASH\" "
+		"xv -300 yv 70 string2 \" E        : PUNCH\" "
+		"xv -300 yv 80 string2 \" RIGHT CLICK: DODGE\" "
+		"xv -300 yv 90 string2 \" F        : STOMP\" "
+		);
 
 	gi.WriteByte (svc_layout);
 	gi.WriteString (string);
@@ -366,6 +362,31 @@ void Cmd_Help_f (edict_t *ent)
 	HelpComputer (ent);
 }
 
+
+
+
+/*
+=================
+show hit miss and enhance and hinderrance text
+=================
+*/
+void Cmd_show_Text(edict_t* ent) {
+	int i;
+	gclient_t* cl;
+	cl = ent->client;
+	cl->showhelp = false;
+	cl->showinventory = false;
+	cl->showscores = false;
+	
+	if (cl->showHitMiss) {
+		cl->showHitMiss = false;
+		return;
+	}
+	cl->showHitMiss = true;
+	gi.WriteByte(svc_layout);
+	gi.unicast(ent, true);
+
+}
 
 //=======================================================================
 
@@ -433,6 +454,46 @@ void G_SetStats (edict_t *ent)
 		ent->client->ps.stats[STAT_ARMOR_ICON] = 0;
 		ent->client->ps.stats[STAT_ARMOR] = 0;
 	}
+
+	//Display beat
+	float timeToBeat = beatSyst.nextGlobalBeat - level.time;
+	float beatProgr = 1.0f - (timeToBeat / beatSyst.beatInterval);
+	
+
+	//set timer
+	ent->client->ps.stats[STAT_BEAT_TIMER] = (int)(fabs(timeToBeat) * 10);
+	//set streak
+	ent->client->ps.stats[STAT_BEAT_STREAK] = ent->client->beatCombo;
+
+
+	if (fabs(timeToBeat) < beatSyst.beatHitWindow) {
+		//icon is on
+		ent->client->ps.stats[STAT_BEAT_ICON] = gi.imageindex("p_quad");
+		if (ent->client->onBeat) {
+			//HIT
+			ent->client->ps.stats[STAT_BEAT_ICON] = gi.imageindex("p_invulnerability");
+		
+		}
+		else if ((beatSyst.nextGlobalBeat - beatSyst.beatInterval - level.time) > beatSyst.beatHitWindow) {
+			//Miss
+			ent->client->ps.stats[STAT_BEAT_ICON] = gi.imageindex("p_quad");
+		
+		}
+	}
+	else {
+		//icon off
+		ent->client->ps.stats[STAT_BEAT_ICON] = 0;
+	}
+
+	//combo
+
+	if (ent->client->beatCombo >= 2) {
+		ent->client->ps.stats[STAT_BEAT_STREAK] = ent->client->beatCombo;
+	}
+	else {
+		ent->client->ps.stats[STAT_BEAT_STREAK] = 0;
+	}
+
 
 	//
 	// pickup message
@@ -502,6 +563,89 @@ void G_SetStats (edict_t *ent)
 		if (ent->client->showinventory && ent->client->pers.health > 0)
 			ent->client->ps.stats[STAT_LAYOUTS] |= 2;
 	}
+
+
+	//Beat system text 
+
+	if (deathmatch->value) {
+		if (ent->client->pers.health > 0 && !ent->client->showhelp && !ent->client->showinventory && !ent->client->showscores) {
+
+			char beatLayout[256];
+			gclient_t* client = ent->client;
+
+			if (client->onBeat) {
+				snprintf(beatLayout, sizeof(beatLayout), "xv 450 yb -450 string2 \"HIT!!!!\"");
+
+				//enhance 
+				if (beatSyst.blastOn == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string2 \"BLAST!!!!\"");
+				}
+				else if (beatSyst.hitWind == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string2 \"HIT WINDOW INCREASE!!!!\"");
+				}
+
+				gi.WriteByte(svc_layout);
+				gi.WriteString(beatLayout);
+				gi.unicast(ent, true);
+				ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+			}
+			else if (!client->onBeat) {
+				snprintf(beatLayout, sizeof(beatLayout), "xv 450 yb -450 string \"MISS!!!!\"");
+				// hinderance
+				if (beatSyst.silance == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string \"SILANCE!!!!\"");
+
+				}
+				else if (beatSyst.speedUP == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string \"SPEEDUP!!!!\"");
+				}
+				gi.WriteByte(svc_layout);
+				gi.WriteString(beatLayout);
+				gi.unicast(ent, true);
+				ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+			}
+
+		}
+	}
+	else {
+		if (ent->client->pers.health > 0 && !ent->client->showhelp && !ent->client->showinventory && !ent->client->showscores) {
+
+			char beatLayout[256];
+			gclient_t* client = ent->client;
+
+			if (client->onBeat) {
+				snprintf(beatLayout, sizeof(beatLayout), "xv 450 yb -450 string2 \"HIT!!!!\"");
+
+				//enhance 
+				if (beatSyst.blastOn == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string2 \"BLAST!!!!\"");
+				} else if (beatSyst.hitWind == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string2 \"HIT WINDOW INCREASE!!!!\"");
+				}
+
+				gi.WriteByte(svc_layout);
+				gi.WriteString(beatLayout);
+				gi.unicast(ent, true);
+				ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+			}
+			else if (!client->onBeat) {
+				snprintf(beatLayout, sizeof(beatLayout), "xv 450 yb -450 string \"MISS!!!!\"");
+				// hinderance
+				if (beatSyst.silance == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string \"SILANCE!!!!\"");
+
+				}else if (beatSyst.speedUP == true) {
+					snprintf(beatLayout, sizeof(beatLayout), "xv 100 yb -450 string \"SPEEDUP!!!!\"");
+				}
+				gi.WriteByte(svc_layout);
+				gi.WriteString(beatLayout);
+				gi.unicast(ent, true);
+				ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+			}
+
+		}
+	}
+
 
 	//
 	// frags

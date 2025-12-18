@@ -343,6 +343,134 @@ void ExitLevel (void)
 
 }
 
+
+
+/*
+=================
+Update Beat Inpute
+=================
+*/
+void UpdateBeat(void) {
+
+	//check if speed up hinderance is done 
+	if (beatSyst.tempoEffectTimer > 0 && level.time > beatSyst.tempoEffectTimer) {
+		//go back to original bpm or reset silence
+		beatSyst.bpm = 120;
+		beatSyst.beatInterval = 60.0 / 120;
+		beatSyst.tempoEffectTimer = 0;
+		beatSyst.beatHitWindow = 0.25f;
+
+		beatSyst.effectOn = false;
+		beatSyst.silance = false;
+		beatSyst.blastOn = false;
+		beatSyst.speedUP = false;
+		beatSyst.hitWind = false;
+
+		gi.bprintf(PRINT_HIGH, "Back to orig gameplay!\n");
+	}
+
+	//check when can we 'spawn' the next beat
+	if (level.time >= beatSyst.nextGlobalBeat) {
+		beatSyst.currBeat++;
+		beatSyst.nextGlobalBeat = level.time + beatSyst.beatInterval;
+		//play sound indicator
+		for (int i = 0; i < game.maxclients; i++) {
+			edict_t* ent = g_edicts + 1 + i;
+			if (ent->inuse && ent->client) {
+				//check if slience hinder is active
+				if (!beatSyst.silance) {
+					//not active play sound
+					gi.sound(ent, CHAN_AUTO, gi.soundindex("tank/tnkatk2e.wav"), 1, ATTN_NONE, 0);
+				}
+				
+			}
+		}
+		
+	}
+}
+
+/*
+=================
+Check if player hits the note upon any action made ex: jump, double jump , dash , dodge, stomp , punch , fire weapon
+=================
+*/
+qboolean checkOnBeat(edict_t* ent) {
+	vec3_t start, aimdir;
+
+	if (!ent || !ent->client) {
+		return;
+	}
+	gclient_t* client = ent->client;
+	float currTime = level.time;
+	float timeSinceBeat = currTime - (beatSyst.nextGlobalBeat - beatSyst.beatInterval);
+
+	//check if player hit the note on time
+	if (fabs(timeSinceBeat) <= beatSyst.beatHitWindow) {
+		//player hit on time
+		client->onBeat = true;
+		client->beatCombo++;
+		client->beatMissCombo = 0;
+		if (client->beatCombo == 5) {
+			if (!beatSyst.effectOn) {
+				//no effect happening give enhancement
+				if (rand() % 2) {
+					//blast and kill enemies nearby large ranage 
+					beatSyst.blastOn = true;
+					VectorCopy(ent->s.origin, start);
+					VectorSet(aimdir, 0, 0, -1);
+
+					//god mode so player does not take damage
+					ent->flags |= FL_GODMODE;
+					//deals damage with grenade weapon for radius damage
+					fire_grenade2(ent, start, aimdir, 1000, 0, 0, 2000, false);
+					ent->flags &= ~FL_GODMODE;
+				}
+				else {
+					beatSyst.hitWind = true;
+					//player has higher hit window allows player to move a freely
+					beatSyst.beatHitWindow = 0.5f;
+					//set this up for 10 seconds
+					beatSyst.tempoEffectTimer = level.time + 10.0;
+					
+				}
+				client->beatCombo = 0;
+			}
+
+		}
+
+		return true;
+	}
+	else if (fabs(timeSinceBeat) > beatSyst.beatHitWindow) {
+		//player missed reset beat combo counter to zero
+		client->onBeat = false;
+		client->beatCombo = 0;
+		client->beatMissCombo++;
+		if (client->beatMissCombo > 5) {
+			if (!beatSyst.effectOn) {
+				if (rand()%2) {
+					//increase bpm
+					beatSyst.speedUP = true;
+					beatSyst.bpm = 180.0f;
+					beatSyst.beatInterval = 60 / 180.0;
+					//last 10 seconds
+					beatSyst.tempoEffectTimer = level.time + 10.0;
+				}
+				else {
+					
+					beatSyst.silance = true;
+					//silent for 10 seconds
+					beatSyst.tempoEffectTimer = level.time + 10.0;
+				}
+				client->beatMissCombo = 0;
+			}
+
+		}
+		
+	}
+	
+	return false;
+}
+
 /*
 ================
 G_RunFrame
@@ -400,6 +528,7 @@ void G_RunFrame (void)
 		}
 
 		G_RunEntity (ent);
+		UpdateBeat ();
 	}
 
 	// see if it is time to end a deathmatch

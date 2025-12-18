@@ -670,6 +670,20 @@ char *single_statusbar =
 "	pic 4 "
 "endif "
 
+// beat metronome 
+"yb		-300 " //icon will be at the top
+"xv		 150 "
+"if 18 "	  //if beat icon is set
+"	pic 18 "  //show icon
+"endif "
+
+//Combo counter
+"yb -350 "
+"xv 450 "
+"num 2 20 "
+
+"yb	-24 "
+
 // selected item
 "if 6 "
 "	xv	296 "

@@ -899,6 +899,170 @@ void Cmd_PlayerList_f(edict_t *ent)
 	gi.cprintf(ent, PRINT_HIGH, "%s", text);
 }
 
+/*
+=================
+Dash movement - shift
+=================
+*/
+void Cmd_Dash_f(edict_t* ent) {
+	if (!ent || !ent->client) {
+		return;
+	}
+
+	gclient_t* client = ent->client;
+
+	//beat detection
+	qboolean onBeat = checkOnBeat(ent);
+
+	//gi.bprintf(PRINT_HIGH, "DASH!\n");
+	
+	vec3_t forward, start;
+
+	float dashSpeed = 1000;
+	
+	//dash base on player view 
+	AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+	VectorScale(forward, dashSpeed, ent->velocity);
+
+	//Deal Damage to enemies
+	VectorCopy(ent->s.origin, start);
+	//fire a bullet at the same speed as dash
+	fire_blaster(ent, start, forward, 100, 1000, 0, false);
+}
+
+/*
+=================
+Punch 
+=================
+*/
+void Cmd_Punch_f(edict_t* ent) {
+	if (!ent || !ent->client) {
+		return;
+	}
+
+	gclient_t* client = ent->client;
+	qboolean onBeat = checkOnBeat(ent);
+
+	//gi.bprintf(PRINT_HIGH, "PUNCH!\n");
+
+	vec3_t forward, start, end;
+	float punchRange = 65.0f;
+	int punchDamage = 25;
+	int knockBack = 500;
+
+	//use player view to punch
+	AngleVectors(ent->client->v_angle, forward, NULL, NULL);
+
+	//calculate start and end points
+	VectorCopy(ent->s.origin, start);
+	//player eyelevel
+	start[2] += ent->viewheight;
+	VectorMA(start, punchRange, forward, end);
+
+	//see if we hit anything
+	trace_t tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
+	if (tr.fraction < 1.0 && tr.ent && tr.ent->takedamage) {
+		if (tr.ent != ent) {
+			//calculate direction for knockback
+			vec3_t punchDir;
+
+			VectorSubtract(tr.ent->s.origin, ent->s.origin, punchDir);
+			punchDir[2] = 0;
+			VectorNormalize(punchDir);
+			//give damage
+			T_Damage(tr.ent, ent, ent, punchDir, tr.endpos, vec3_origin, punchDamage, knockBack, 0, MOD_HIT);
+			//gi.bprintf(PRINT_HIGH, "Punch hit: %s\n", tr.ent->classname);
+		}
+		else {
+			//player hit nothing
+			//gi.bprintf(PRINT_HIGH, "MISS PUNCH\n");
+		}
+	}
+}
+
+/*
+=================
+Dodge - SHOULD BE RIGHT CLICK
+=================
+*/
+void Cmd_Dodge_f(edict_t* ent) {
+	if (!ent || !ent->client) {
+		return;
+	}
+
+	gclient_t *client = ent->client;
+	qboolean onBeat = checkOnBeat(ent);
+
+
+	//player will dodge based on the keys pressed
+	usercmd_t* ucmd = &client->currCmd;
+
+	//dodge left, right and backward
+	vec3_t dodgeDir, forward, right, up;
+	float dodgeSpeed = 1000.0f;
+
+	AngleVectors(ent->client->v_angle, forward, right, up);
+	
+	VectorClear(dodgeDir);
+
+	//player dodges backward
+	if (ucmd->forwardmove < 0) {
+		VectorSubtract(dodgeDir, forward, dodgeDir);
+		//gi.bprintf(PRINT_HIGH, "DODGE Back\n");
+	}
+	//player dodges left or right
+	if (ucmd->sidemove > 0) {
+		VectorAdd(dodgeDir, right, dodgeDir);
+		//gi.bprintf(PRINT_HIGH, "DODGE Left\n");
+	}
+	else if (ucmd->sidemove < 0) {
+		VectorSubtract(dodgeDir, right, dodgeDir);
+		//gi.bprintf(PRINT_HIGH, "DODGE Right\n");
+	}
+
+	VectorNormalize(dodgeDir);
+
+	
+	VectorScale(dodgeDir, dodgeSpeed, ent->velocity);
+	
+}
+
+
+/*
+=================
+Stomp - f
+=================
+*/
+void Cmd_Stomp_f(edict_t* ent) {
+	//gi.bprintf(PRINT_HIGH, "STOMP!\n");
+	vec3_t start, aimdir;
+
+	if (!ent || !ent->client) {
+		return;
+	}
+
+	gclient_t* client = ent->client;
+
+	qboolean onBeat = checkOnBeat(ent);
+
+	//check if we are in the air
+	if (ent->groundentity) {
+		//player is on the ground
+		return;
+	}
+	//slam down
+	ent->velocity[2] = -1000;
+
+	VectorCopy(ent->s.origin, start);
+	VectorSet(aimdir, 0, 0, -1);
+
+	//god mode so player does not take damage
+	ent->flags |= FL_GODMODE;
+	//deals damage with grenade weapon for radius damage
+	fire_grenade2(ent, start, aimdir, 100, 0, 0, 200, false);
+	ent->flags &= ~FL_GODMODE;
+}
+
 
 /*
 =================
@@ -987,6 +1151,14 @@ void ClientCommand (edict_t *ent)
 		Cmd_Wave_f (ent);
 	else if (Q_stricmp(cmd, "playerlist") == 0)
 		Cmd_PlayerList_f(ent);
+	else if (Q_stricmp(cmd, "dash") == 0)
+		Cmd_Dash_f(ent);
+	else if (Q_stricmp(cmd, "punch") == 0)
+		Cmd_Punch_f(ent);
+	else if (Q_stricmp(cmd, "dodge") == 0)
+		Cmd_Dodge_f(ent);
+	else if (Q_stricmp(cmd, "stomp") == 0)
+		Cmd_Stomp_f(ent);
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
 }

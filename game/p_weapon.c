@@ -545,6 +545,7 @@ GRENADE
 
 void weapon_grenade_fire (edict_t *ent, qboolean held)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t	offset;
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -552,6 +553,8 @@ void weapon_grenade_fire (edict_t *ent, qboolean held)
 	float	timer;
 	int		speed;
 	float	radius;
+
+	
 
 	radius = damage+40;
 	if (is_quad)
@@ -590,6 +593,7 @@ void weapon_grenade_fire (edict_t *ent, qboolean held)
 		ent->s.frame = FRAME_wave08;
 		ent->client->anim_end = FRAME_wave01;
 	}
+	
 }
 
 void Weapon_Grenade (edict_t *ent)
@@ -708,11 +712,14 @@ GRENADE LAUNCHER
 
 void weapon_grenadelauncher_fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t	offset;
 	vec3_t	forward, right;
 	vec3_t	start;
 	int		damage = 120;
 	float	radius;
+
+	
 
 	radius = damage+40;
 	if (is_quad)
@@ -743,9 +750,9 @@ void weapon_grenadelauncher_fire (edict_t *ent)
 void Weapon_GrenadeLauncher (edict_t *ent)
 {
 	static int	pause_frames[]	= {34, 51, 59, 0};
-	static int	fire_frames[]	= {6, 0};
+	static int	fire_frames[]	= {5, 0};
 
-	Weapon_Generic (ent, 5, 16, 59, 64, pause_frames, fire_frames, weapon_grenadelauncher_fire);
+	Weapon_Generic (ent, 4, 8, 59, 64, pause_frames, fire_frames, weapon_grenadelauncher_fire);
 }
 
 /*
@@ -758,6 +765,7 @@ ROCKET
 
 void Weapon_RocketLauncher_Fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t	offset, start;
 	vec3_t	forward, right;
 	int		damage;
@@ -790,7 +798,9 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 
 	ent->client->ps.gunframe++;
 
+	
 	PlayerNoise(ent, start, PNOISE_WEAPON);
+	
 
 	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
 		ent->client->pers.inventory[ent->client->ammo_index]--;
@@ -798,10 +808,10 @@ void Weapon_RocketLauncher_Fire (edict_t *ent)
 
 void Weapon_RocketLauncher (edict_t *ent)
 {
-	static int	pause_frames[]	= {25, 33, 42, 50, 0};
+	static int	pause_frames[]	= { 34, 51, 59, 0 };
 	static int	fire_frames[]	= {5, 0};
 
-	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
+	Weapon_Generic (ent, 4, 8, 59, 64, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 }
 
 
@@ -815,9 +825,16 @@ BLASTER / HYPERBLASTER
 
 void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t	forward, right;
 	vec3_t	start;
 	vec3_t	offset;
+
+	
+
+	if (!onBeat && hyper) {
+		return;
+	}
 
 	if (is_quad)
 		damage *= 4;
@@ -867,36 +884,42 @@ void Weapon_Blaster (edict_t *ent)
 
 void Weapon_HyperBlaster_Fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	float	rotation;
 	vec3_t	offset;
 	int		effect;
 	int		damage;
 
-	ent->client->weapon_sound = gi.soundindex("weapons/hyprbl1a.wav");
+	//ent->client->weapon_sound = gi.soundindex("weapons/hyprbl1a.wav");
 
 	if (!(ent->client->buttons & BUTTON_ATTACK))
 	{
 		ent->client->ps.gunframe++;
+		if (ent->client->ps.gunframe >= 8) {
+			//gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/hyprbl1a.wav"), 1, ATTN_NORM, 0);
+			ent->client->weapon_sound = 0;
+		}
 	}
 	else
 	{
+		
 		if (! ent->client->pers.inventory[ent->client->ammo_index] )
 		{
 			if (level.time >= ent->pain_debounce_time)
 			{
-				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+				//gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
 				ent->pain_debounce_time = level.time + 1;
 			}
 			NoAmmoWeaponChange (ent);
 		}
 		else
 		{
-			rotation = (ent->client->ps.gunframe - 5) * 2*M_PI/6;
-			offset[0] = -4 * sin(rotation);
+			rotation = 0;
+			offset[0] = 0;
 			offset[1] = 0;
-			offset[2] = 4 * cos(rotation);
+			offset[2] = 0;
 
-			if ((ent->client->ps.gunframe == 6) || (ent->client->ps.gunframe == 9))
+			if ((ent->client->ps.gunframe == 7) || (ent->client->ps.gunframe == 10))
 				effect = EF_HYPERBLASTER;
 			else
 				effect = 0;
@@ -904,6 +927,8 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 				damage = 15;
 			else
 				damage = 20;
+
+			//check beat 
 			Blaster_Fire (ent, offset, damage, true, effect);
 			if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
 				ent->client->pers.inventory[ent->client->ammo_index]--;
@@ -922,24 +947,20 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 		}
 
 		ent->client->ps.gunframe++;
-		if (ent->client->ps.gunframe == 12 && ent->client->pers.inventory[ent->client->ammo_index])
-			ent->client->ps.gunframe = 6;
+		if (ent->client->ps.gunframe == 8 && ent->client->pers.inventory[ent->client->ammo_index])
+			ent->client->ps.gunframe = 7;
 	}
 
-	if (ent->client->ps.gunframe == 12)
-	{
-		gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/hyprbd1a.wav"), 1, ATTN_NORM, 0);
-		ent->client->weapon_sound = 0;
-	}
+
 
 }
 
 void Weapon_HyperBlaster (edict_t *ent)
 {
-	static int	pause_frames[]	= {0};
-	static int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
+	static int	pause_frames[]	= { 22, 28, 34, 0 };
+	static int	fire_frames[]	= { 8, 0 };
 
-	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, Weapon_HyperBlaster_Fire);
+	Weapon_Generic (ent, 7, 10, 36, 39, pause_frames, fire_frames, Weapon_HyperBlaster_Fire);
 }
 
 /*
@@ -952,6 +973,7 @@ MACHINEGUN / CHAINGUN
 
 void Machinegun_Fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	int	i;
 	vec3_t		start;
 	vec3_t		forward, right;
@@ -960,6 +982,7 @@ void Machinegun_Fire (edict_t *ent)
 	int			kick = 2;
 	vec3_t		offset;
 
+	
 	if (!(ent->client->buttons & BUTTON_ATTACK))
 	{
 		ent->client->machinegun_shots = 0;
@@ -967,10 +990,18 @@ void Machinegun_Fire (edict_t *ent)
 		return;
 	}
 
-	if (ent->client->ps.gunframe == 5)
-		ent->client->ps.gunframe = 4;
-	else
+	//press and hold firing button sync to the beat
+	if (onBeat) {
+		if (ent->client->ps.gunframe == 5)
+			ent->client->ps.gunframe = 4;
+		else
+			ent->client->ps.gunframe = 5;
+	}
+	else {
 		ent->client->ps.gunframe = 5;
+		return;
+	}
+
 
 	if (ent->client->pers.inventory[ent->client->ammo_index] < 1)
 	{
@@ -1038,14 +1069,15 @@ void Machinegun_Fire (edict_t *ent)
 
 void Weapon_Machinegun (edict_t *ent)
 {
-	static int	pause_frames[]	= {23, 45, 0};
-	static int	fire_frames[]	= {4, 5, 0};
+	static int	pause_frames[]	= { 38, 43, 51, 61, 0 };
+	static int	fire_frames[]	= { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0 };
 
-	Weapon_Generic (ent, 3, 5, 45, 49, pause_frames, fire_frames, Machinegun_Fire);
+	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Machinegun_Fire);
 }
 
 void Chaingun_Fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	int			i;
 	int			shots;
 	vec3_t		start;
@@ -1054,6 +1086,8 @@ void Chaingun_Fire (edict_t *ent)
 	vec3_t		offset;
 	int			damage;
 	int			kick = 2;
+
+	
 
 	if (deathmatch->value)
 		damage = 6;
@@ -1069,15 +1103,36 @@ void Chaingun_Fire (edict_t *ent)
 		ent->client->weapon_sound = 0;
 		return;
 	}
-	else if ((ent->client->ps.gunframe == 21) && (ent->client->buttons & BUTTON_ATTACK)
-		&& ent->client->pers.inventory[ent->client->ammo_index])
-	{
-		ent->client->ps.gunframe = 15;
+	
+	//check if player is on beat
+	if (ent->client->buttons & BUTTON_ATTACK) {
+		if (onBeat) {
+			if ((ent->client->ps.gunframe == 21) && (ent->client->buttons & BUTTON_ATTACK)
+				&& ent->client->pers.inventory[ent->client->ammo_index])
+			{
+				ent->client->ps.gunframe = 15;
+			}
+			else
+			{
+				ent->client->ps.gunframe++;
+			}
+		}
+		else {
+			if (ent->client->ps.gunframe >= 5 && ent->client->ps.gunframe <= 21) {
+				//stay on curr frame
+				if (ent->client->ps.gunframe > 14) {
+					ent->client->ps.gunframe = 14;
+				}
+			}else {
+				ent->client->ps.gunframe++;
+			}
+
+		}
 	}
-	else
-	{
+	else {
 		ent->client->ps.gunframe++;
 	}
+	
 
 	if (ent->client->ps.gunframe == 22)
 	{
@@ -1099,6 +1154,11 @@ void Chaingun_Fire (edict_t *ent)
 	{
 		ent->s.frame = FRAME_attack1 - (ent->client->ps.gunframe & 1);
 		ent->client->anim_end = FRAME_attack8;
+	}
+
+	//fire bullets on beat fire nothing if off beat
+	if (!onBeat && (ent->client->buttons & BUTTON_ATTACK)) {
+		return;
 	}
 
 	if (ent->client->ps.gunframe <= 9)
@@ -1166,9 +1226,8 @@ void Chaingun_Fire (edict_t *ent)
 
 void Weapon_Chaingun (edict_t *ent)
 {
-	static int	pause_frames[]	= {38, 43, 51, 61, 0};
-	static int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
-
+	static int	pause_frames[]	= {38, 43, 51, 61, 0}; 
+	static int	fire_frames[]	= { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0 }; 
 	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 }
 
@@ -1183,11 +1242,14 @@ SHOTGUN / SUPERSHOTGUN
 
 void weapon_shotgun_fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t		start;
 	vec3_t		forward, right;
 	vec3_t		offset;
 	int			damage = 4;
 	int			kick = 8;
+
+	
 
 	if (ent->client->ps.gunframe == 9)
 	{
@@ -1232,18 +1294,21 @@ void Weapon_Shotgun (edict_t *ent)
 	static int	pause_frames[]	= {22, 28, 34, 0};
 	static int	fire_frames[]	= {8, 9, 0};
 
-	Weapon_Generic (ent, 7, 18, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
+	Weapon_Generic (ent, 7, 10, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
 }
 
 
 void weapon_supershotgun_fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t		start;
 	vec3_t		forward, right;
 	vec3_t		offset;
 	vec3_t		v;
 	int			damage = 6;
 	int			kick = 12;
+
+	
 
 	AngleVectors (ent->client->v_angle, forward, right, NULL);
 
@@ -1286,7 +1351,7 @@ void Weapon_SuperShotgun (edict_t *ent)
 	static int	pause_frames[]	= {29, 42, 57, 0};
 	static int	fire_frames[]	= {7, 0};
 
-	Weapon_Generic (ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
+	Weapon_Generic (ent, 6, 8, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
 }
 
 
@@ -1301,11 +1366,13 @@ RAILGUN
 
 void weapon_railgun_fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t		start;
 	vec3_t		forward, right;
 	vec3_t		offset;
 	int			damage;
 	int			kick;
+	
 
 	if (deathmatch->value)
 	{	// normal damage is too extreme in dm
@@ -1352,7 +1419,7 @@ void Weapon_Railgun (edict_t *ent)
 	static int	pause_frames[]	= {56, 0};
 	static int	fire_frames[]	= {4, 0};
 
-	Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
+	Weapon_Generic (ent, 3, 8, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 }
 
 
@@ -1366,10 +1433,12 @@ BFG10K
 
 void weapon_bfg_fire (edict_t *ent)
 {
+	qboolean onBeat = checkOnBeat(ent);
 	vec3_t	offset, start;
 	vec3_t	forward, right;
 	int		damage;
 	float	damage_radius = 1000;
+	
 
 	if (deathmatch->value)
 		damage = 200;
@@ -1384,50 +1453,55 @@ void weapon_bfg_fire (edict_t *ent)
 		gi.WriteByte (MZ_BFG | is_silenced);
 		gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-		ent->client->ps.gunframe++;
+		//fire instantly
+		// cells can go down during windup (from power armor hits), so
+		// check again and abort firing if we don't have enough now
+		if (ent->client->pers.inventory[ent->client->ammo_index] < 50)
+		{
+			ent->client->ps.gunframe++;
+			return;
+		}
 
+		if (is_quad)
+			damage *= 4;
+
+		AngleVectors (ent->client->v_angle, forward, right, NULL);
+
+		VectorScale (forward, -2, ent->client->kick_origin);
+
+		// make a big pitch kick with an inverse fall
+		ent->client->v_dmg_pitch = -40;
+		ent->client->v_dmg_roll = crandom()*8;
+		ent->client->v_dmg_time = level.time + DAMAGE_TIME;
+
+		VectorSet(offset, 8, 8, ent->viewheight-8);
+		P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+		fire_bfg (ent, start, forward, damage, 700, damage_radius);
+
+
+		//subtract ammo
+		if (!((int)dmflags->value & DF_INFINITE_AMMO)) {
+			ent->client->pers.inventory[ent->client->ammo_index] -= 50;
+		}
+
+		ent->client->ps.gunframe++;
 		PlayerNoise(ent, ent->s.origin, PNOISE_WEAPON);
 		return;
 	}
-
-	// cells can go down during windup (from power armor hits), so
-	// check again and abort firing if we don't have enough now
-	if (ent->client->pers.inventory[ent->client->ammo_index] < 50)
-	{
-		ent->client->ps.gunframe++;
-		return;
-	}
-
-	if (is_quad)
-		damage *= 4;
-
-	AngleVectors (ent->client->v_angle, forward, right, NULL);
-
-	VectorScale (forward, -2, ent->client->kick_origin);
-
-	// make a big pitch kick with an inverse fall
-	ent->client->v_dmg_pitch = -40;
-	ent->client->v_dmg_roll = crandom()*8;
-	ent->client->v_dmg_time = level.time + DAMAGE_TIME;
-
-	VectorSet(offset, 8, 8, ent->viewheight-8);
-	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
-	fire_bfg (ent, start, forward, damage, 400, damage_radius);
 
 	ent->client->ps.gunframe++;
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
-		ent->client->pers.inventory[ent->client->ammo_index] -= 50;
+
 }
 
 void Weapon_BFG (edict_t *ent)
 {
 	static int	pause_frames[]	= {39, 45, 50, 55, 0};
-	static int	fire_frames[]	= {9, 17, 0};
+	static int	fire_frames[]	= {9, 10, 0};
 
-	Weapon_Generic (ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
+	Weapon_Generic (ent, 8, 16, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
 
 

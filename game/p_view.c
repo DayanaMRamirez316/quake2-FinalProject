@@ -544,11 +544,11 @@ void P_FallingDamage (edict_t *ent)
 		ent->client->fall_value = 40;
 	ent->client->fall_time = level.time + FALL_TIME;
 
-	if (delta > 30)
+	if (delta > 500)
 	{
 		if (ent->health > 0)
 		{
-			if (delta >= 55)
+			if (delta >= 550)
 				ent->s.event = EV_FALLFAR;
 			else
 				ent->s.event = EV_FALL;

@@ -616,8 +616,8 @@ void InitClientPersistant (gclient_t *client)
 
 	client->pers.weapon = item;
 
-	client->pers.health			= 100;
-	client->pers.max_health		= 100;
+	client->pers.health			= 300;
+	client->pers.max_health		= 300;
 
 	client->pers.max_bullets	= 200;
 	client->pers.max_shells		= 100;
@@ -1576,6 +1576,12 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	level.current_entity = ent;
 	client = ent->client;
+	client->currCmd = *ucmd;
+	
+	//reset double jump when on the ground
+	if (ent->groundentity) {
+		client->canDJump = false;
+	}
 
 	if (level.intermissiontime)
 	{
@@ -1653,6 +1659,17 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		{
 			gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
 			PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
+			qboolean onBeat = checkOnBeat(ent);
+		}
+
+		//double jump: check if player is in the air and presses the jump button again
+		if (!ent->groundentity && (ucmd->upmove >= 10) && !(client->ps.pmove.pm_flags & PMF_JUMP_HELD) && !client->canDJump ) {
+			ent->velocity[2] = 300;
+			client->canDJump = true;
+			gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
+			PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
+			//gi.bprintf(PRINT_HIGH, "Double JUMP\n");
+			qboolean onBeat = checkOnBeat(ent);
 		}
 
 		ent->viewheight = pm.viewheight;

@@ -892,6 +892,7 @@ struct gclient_s
 	qboolean	showinventory;		// set layout stat
 	qboolean	showhelp;
 	qboolean	showhelpicon;
+	qboolean	showHitMiss;
 
 	int			ammo_index;
 
@@ -959,6 +960,21 @@ struct gclient_s
 
 	edict_t		*chase_target;		// player we are chasing
 	qboolean	update_chase;		// need to update chase info?
+
+	qboolean canDJump;				//check if player can jump again in mid air
+	
+	float nextDash;					// when can player dash again
+	usercmd_t oldCmd;				//save previous command
+
+	usercmd_t currCmd;				//save current command used
+
+	float nextBeatTime;				//Next beat timing 
+
+	qboolean onBeat;				//check if player was on beat
+
+	int beatCombo;					//check if player is staying on beat
+	int beatMissCombo;
+
 };
 
 
@@ -1111,3 +1127,26 @@ struct edict_s
 	monsterinfo_t	monsterinfo;
 };
 
+//beat system
+typedef struct {
+	float bpm;	//tempo speed
+	float beatInterval; //the time between beat
+	
+	int currBeat; //beat count currently
+	float nextGlobalBeat; //next global beat time
+	float beatHitWindow; //window of time when player can hit the note
+	edict_t *visualMetro;
+
+	//enhace and hinderance
+	float tempoEffectTimer;
+
+	qboolean silance;
+
+	qboolean effectOn;
+	qboolean blastOn;
+	qboolean speedUP;
+	qboolean hitWind;
+
+} beatSystem_t;
+
+extern beatSystem_t beatSyst;
