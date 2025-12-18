@@ -6,11 +6,18 @@ IT266 section 001
 SET UP
 ======================
 
-clone github files
+clone github repository
 
 git clone [url]
 
-files should now be in your folder
+cd quake2-FinalProject
+
+Then go into  visual studio and open quake2.sln
+
+Build the mode in Release mode
+
+look for the .dll ex: game/release/gamex86.dll
+
 
 copy the mod files(.dll, .cfg,...) and place them in a folder where the game exacutable resides for me it was:
 
